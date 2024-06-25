@@ -1,0 +1,17 @@
+services:
+  web:
+    build: .
+    ports:
+      - "10025:10025"
+    depends_on:
+      - ai
+    links:
+      - ai
+  
+  ai:
+    env_file:
+      - ai/.env
+    build:
+      context: ai
+      dockerfile: Dockerfile
+    
