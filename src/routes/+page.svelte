@@ -5,11 +5,13 @@
 	let sidebarWidgets = writable([]);
 	let mainWidgets = writable([]);
 	let widgetId = 0;
+	const inputTextBox = document.getElementById('inputText');
 
 	function addWidget() {
 		if (inputText.trim()) {
 			sidebarWidgets.update((current) => [...current, { id: widgetId++, text: inputText }]);
 			inputText = '';
+			inputTextBox.focus();
 		}
 	}
 
@@ -36,7 +38,17 @@
 <div class="container">
 	<div class="sidebar">
 		<div class="sidebar-header">
-			<input type="text" bind:value={inputText} placeholder="Type a word" />
+			<input
+				type="text"
+				bind:value={inputText}
+				placeholder="Type a word"
+				id="inputText"
+				on:keypress={(e) => {
+					if (e.key === 'Enter') {
+						addWidget();
+					}
+				}}
+			/>
 			<button on:click={addWidget}>Add Widget</button>
 		</div>
 		<div>
