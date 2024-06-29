@@ -1,26 +1,39 @@
-<script>
-	import { writable } from 'svelte/store';
+<script lang="ts">
+	import { writable, type Writable } from 'svelte/store';
+	import { onMount } from 'svelte';
+
+	interface Widget {
+		id: number;
+		text: string;
+		x?: number;
+		y?: number;
+	}
 
 	let inputText = '';
-	let sidebarWidgets = writable([]);
-	let mainWidgets = writable([]);
+	let sidebarWidgets: Writable<Widget[]> = writable([]);
+	let mainWidgets: Writable<Widget[]> = writable([]);
 	let widgetId = 0;
-	const inputTextBox = document.getElementById('inputText');
+	let inputTextBox: HTMLInputElement;
+
+	onMount(() => {
+		inputTextBox = document.getElementById('inputText') as HTMLInputElement;
+		if (inputTextBox) inputTextBox.focus();
+	});
 
 	function addWidget() {
 		if (inputText.trim()) {
 			sidebarWidgets.update((current) => [...current, { id: widgetId++, text: inputText }]);
 			inputText = '';
-			inputTextBox.focus();
+			if (inputTextBox) inputTextBox.focus();
 		}
 	}
 
-	function handleDragStart(event, widget, source) {
-		event.dataTransfer.setData('application/json', JSON.stringify({ widget, source }));
+	function handleDragStart(event: DragEvent, widget: Widget, source: string) {
+		event.dataTransfer?.setData('application/json', JSON.stringify({ widget, source }));
 	}
 
-	function handleDrop(event) {
-		const { widget, source } = JSON.parse(event.dataTransfer.getData('application/json'));
+	function handleDrop(event: DragEvent) {
+		const { widget, source } = JSON.parse(event.dataTransfer?.getData('application/json') || '{}');
 		const rect = event.currentTarget.getBoundingClientRect();
 		const x = event.clientX - rect.left;
 		const y = event.clientY - rect.top;
@@ -32,6 +45,26 @@
 				return current.map((w) => (w.id === widget.id ? { ...w, x, y } : w));
 			});
 		}
+	}
+
+	function handleDropOnWidget(event: DragEvent, targetWidget: Widget) {
+		event.preventDefault();
+		const { widget, source } = JSON.parse(event.dataTransfer?.getData('application/json') || '{}');
+
+		if (source === 'sidebar') {
+			mainWidgets.update((current) => [
+				...current,
+				{ ...widget, x: targetWidget.x, y: targetWidget.y, id: widgetId++ }
+			]);
+		} else {
+			mainWidgets.update((current) => {
+				return current.map((w) =>
+					w.id === widget.id ? { ...w, x: targetWidget.x, y: targetWidget.y } : w
+				);
+			});
+		}
+
+		console.log(`Widget dropped on ${targetWidget.text}`);
 	}
 </script>
 
@@ -70,6 +103,8 @@
 				style="left: {widget.x}px; top: {widget.y}px;"
 				draggable="true"
 				on:dragstart={(e) => handleDragStart(e, widget, 'main')}
+				on:drop={(e) => handleDropOnWidget(e, widget)}
+				on:dragover={(e) => e.preventDefault()}
 			>
 				{widget.text}
 			</div>
